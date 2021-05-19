@@ -80,7 +80,14 @@ class Trainer(abc.ABC):
             #    save the model to the file specified by the checkpoints
             #    argument.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            train_losses, train_accuracy = self.train_epoch(dl_train)
+            test_losses, test_accuracy = self.test_epoch(dl_test)
+            # TODO: saar need to wait to understand if early stopping is happenenig if mean loss is does not improved from previous epoch
+            train_loss.extend(train_losses)
+            train_acc.append(train_accuracy)
+            test_loss.extend(test_losses)
+            test_acc.append(test_accuracy)
+
             # ========================
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
@@ -200,7 +207,14 @@ class LayerTrainer(Trainer):
         #  - Calculate number of correct predictions (make sure it's an int,
         #    not a tensor) as num_correct.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        X = X.view(X.shape[0], -1)
+        y_pred = self.model(X)
+        loss = self.loss_fn(y_pred, y)
+        self.model.backward(self.loss_fn.backward())
+        self.optimizer.step()
+        y_pred = y_pred.argmax(dim=1)
+        num_correct = (y == y_pred).sum()
+
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -210,7 +224,11 @@ class LayerTrainer(Trainer):
 
         # TODO: Evaluate the Layer model on one batch of data.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        X = X.view(X.shape[0], -1)
+        y_pred = self.model(X)
+        loss = self.loss_fn(y_pred, y)
+        y_pred = y_pred.argmax(dim=1)
+        num_correct = (y == y_pred).sum()
         # ========================
 
         return BatchResult(loss, num_correct)
