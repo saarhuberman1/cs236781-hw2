@@ -129,11 +129,11 @@ class RMSProp(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.r_t = [torch.zeros(size=(1,))] * len(self.params)
         # ========================
 
     def step(self):
-        for p, dp in self.params:
+        for i, (p, dp) in enumerate(self.params):
             if dp is None:
                 continue
 
@@ -142,5 +142,8 @@ class RMSProp(Optimizer):
             # average of it's previous gradients. Use it to update the
             # parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            dp += self.reg * p
+            r_t1 = self.decay * self.r_t[i] + (1 - self.decay) * torch.pow(dp, 2)
+            self.r_t[i] = r_t1
+            p -= (self.learn_rate / torch.sqrt((r_t1 + self.eps))) * dp
             # ========================

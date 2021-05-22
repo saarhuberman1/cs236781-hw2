@@ -64,6 +64,7 @@ class Trainer(abc.ABC):
 
         best_acc = None
         epochs_without_improvement = 0
+        best_test_loss = None
 
         for epoch in range(num_epochs):
             verbose = False  # pass this to train/test_epoch.
@@ -80,14 +81,21 @@ class Trainer(abc.ABC):
             #    save the model to the file specified by the checkpoints
             #    argument.
             # ====== YOUR CODE: ======
+            actual_num_epochs += 1
             train_losses, train_accuracy = self.train_epoch(dl_train)
             test_losses, test_accuracy = self.test_epoch(dl_test)
-            # TODO: saar need to wait to understand if early stopping is happenenig if mean loss is does not improved from previous epoch
             train_loss.extend(train_losses)
             train_acc.append(train_accuracy)
             test_loss.extend(test_losses)
             test_acc.append(test_accuracy)
-
+            current_test_loss = torch.mean(torch.stack(test_losses))
+            if (best_test_loss is None) or (current_test_loss < best_test_loss):
+                best_test_loss = current_test_loss
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+            if (early_stopping is not None) and (epochs_without_improvement == early_stopping):
+                break
             # ========================
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
@@ -210,6 +218,7 @@ class LayerTrainer(Trainer):
         X = X.view(X.shape[0], -1)
         y_pred = self.model(X)
         loss = self.loss_fn(y_pred, y)
+        self.optimizer.zero_grad()
         self.model.backward(self.loss_fn.backward())
         self.optimizer.step()
         y_pred = y_pred.argmax(dim=1)

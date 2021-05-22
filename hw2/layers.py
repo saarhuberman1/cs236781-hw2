@@ -232,7 +232,7 @@ class Linear(Layer):
         # Initialize the weights to zero-mean gaussian noise with a standard
         # deviation of `wstd`. Init bias to zero.
         # ====== YOUR CODE: ======
-        self.w = torch.normal(0, wstd, size=(out_features, in_features))
+        self.w = torch.normal(mean=0, std=wstd, size=(out_features, in_features))
         self.b = torch.zeros(size=(out_features,))
         # ========================
 
@@ -365,7 +365,12 @@ class Dropout(Layer):
         #  Notice that contrary to previous layers, this layer behaves
         #  differently a according to the current training_mode (train/test).
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if self.training_mode:
+            mask = torch.bernoulli(torch.full(x.shape, self.p)).int()
+            out = x * mask
+            self.grad_cache["mask"] = mask
+        else:
+            out = x
         # ========================
 
         return out
@@ -373,7 +378,11 @@ class Dropout(Layer):
     def backward(self, dout):
         # TODO: Implement the dropout backward pass.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if self.training_mode:
+            mask = self.grad_cache["mask"]
+            dx = dout * mask
+        else:
+            dx = dout
         # ========================
 
         return dx
@@ -498,8 +507,12 @@ class MLP(Layer):
         else:
             raise Exception('activition should be from {relu, sigmoid}')
         layers.extend([Linear(in_features, hidden_features[0]), act()])
+        if dropout > 0:
+            layers.append(Dropout(dropout))
         for i in range(len(hidden_features)-1):
             layers.extend([Linear(hidden_features[i], hidden_features[i+1]), act()])
+            if dropout > 0:
+                layers.append(Dropout(dropout))
         layers.append(Linear(hidden_features[-1], num_classes))
         # ========================
 
