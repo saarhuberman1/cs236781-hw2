@@ -82,12 +82,13 @@ class Trainer(abc.ABC):
             #    argument.
             # ====== YOUR CODE: ======
             actual_num_epochs += 1
-            train_losses, train_accuracy = self.train_epoch(dl_train)
-            test_losses, test_accuracy = self.test_epoch(dl_test)
+            train_losses, train_accuracy = self.train_epoch(dl_train, **kw)
+            test_losses, test_accuracy = self.test_epoch(dl_test, **kw)
             train_loss.extend(train_losses)
             train_acc.append(train_accuracy)
             test_loss.extend(test_losses)
             test_acc.append(test_accuracy)
+
             current_test_loss = torch.mean(torch.stack(test_losses))
             if (best_test_loss is None) or (current_test_loss < best_test_loss):
                 best_test_loss = current_test_loss
@@ -222,8 +223,7 @@ class LayerTrainer(Trainer):
         self.model.backward(self.loss_fn.backward())
         self.optimizer.step()
         y_pred = y_pred.argmax(dim=1)
-        num_correct = (y == y_pred).sum()
-
+        num_correct = int((y == y_pred).sum())
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -237,7 +237,7 @@ class LayerTrainer(Trainer):
         y_pred = self.model(X)
         loss = self.loss_fn(y_pred, y)
         y_pred = y_pred.argmax(dim=1)
-        num_correct = (y == y_pred).sum()
+        num_correct = int((y == y_pred).sum())
         # ========================
 
         return BatchResult(loss, num_correct)

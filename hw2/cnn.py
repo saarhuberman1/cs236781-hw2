@@ -77,8 +77,23 @@ class ConvClassifier(nn.Module):
         #  Note: If N is not divisible by P, then N mod P additional
         #  CONV->ACTs should exist at the end, without a POOL after them.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
 
+        pooling = POOLINGS[self.pooling_type]
+        act = ACTIVATIONS[self.activation_type]
+
+        layers.extend([nn.Conv2d(in_channels, self.channels[0], *self.conv_params), act(*self.activation_params)])
+        count_p = 1
+        if self.pool_every == 1:
+            layers.append(pooling(*self.pooling_params))
+        for i in range(len(self.channels) - 1):
+            layers.extend([nn.Conv2d(self.channels[i], self.channels[i+1], *self.conv_params), act(*self.activation_params)])
+            count_p += 1
+            if count_p % self.pool_every == 0:
+                layers.append(pooling(*self.pooling_params))
+
+        # for i in range(len(self.hidden_dims)-1):
+        #     layers.extend([nn.Linear(self.hidden_dims[i], self.hidden_dims[i+1]), act(*self.activation_params)])
+        # layers.append(nn.Linear(self.hidden_dims[-1], self.out_classes))
         # ========================
         seq = nn.Sequential(*layers)
         return seq

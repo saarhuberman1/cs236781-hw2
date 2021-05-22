@@ -43,10 +43,11 @@ def part2_optim_hp():
     # You may want to use different learning rates for each optimizer.
     # ====== YOUR CODE: ======
     wstd = 0.01
-    lr_vanilla = 0.01
+    lr_vanilla = 0.03
     reg = 0.01
-    lr_momentum = 1e-3
-    lr_rmsprop = 8e-5
+    lr_momentum = 3e-3
+    lr_rmsprop = 15e-5
+
     # ========================
     return dict(
         wstd=wstd,

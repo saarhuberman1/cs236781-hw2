@@ -366,7 +366,7 @@ class Dropout(Layer):
         #  differently a according to the current training_mode (train/test).
         # ====== YOUR CODE: ======
         if self.training_mode:
-            mask = torch.bernoulli(torch.full(x.shape, self.p)).int()
+            mask = torch.bernoulli(torch.full(x.shape, 1-self.p)).int()
             out = x * mask
             self.grad_cache["mask"] = mask
         else:
@@ -409,13 +409,9 @@ class Sequential(Layer):
         # TODO: Implement the forward pass by passing each layer's output
         #  as the input of the next.
         # ====== YOUR CODE: ======
-        layer_in = x
+        out = x
         for layer in self.layers:
-            if isinstance(layer, CrossEntropyLoss):
-                layer_in = layer(layer_in, kw['y'])
-            else:
-                layer_in = layer(layer_in)
-        out = layer_in
+                out = layer(out, **kw)
         # ========================
 
         return out
@@ -427,11 +423,9 @@ class Sequential(Layer):
         #  Each layer's input gradient should be the previous layer's output
         #  gradient. Behold the backpropagation algorithm in action!
         # ====== YOUR CODE: ======
-        layer_out = dout
-
+        din = dout
         for layer in reversed(self.layers):
-            layer_out = layer.backward(layer_out)
-        din = layer_out
+            din = layer.backward(din)
         # ========================
 
         return din
