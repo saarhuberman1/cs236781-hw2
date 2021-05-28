@@ -14,7 +14,6 @@ class ConvClassifier(nn.Module):
     The architecture is:
     [(CONV -> ACT)*P -> POOL]*(N/P) -> (FC -> ACT)*M -> FC
     """
-
     def __init__(
         self,
         in_size,
@@ -77,23 +76,20 @@ class ConvClassifier(nn.Module):
         #  Note: If N is not divisible by P, then N mod P additional
         #  CONV->ACTs should exist at the end, without a POOL after them.
         # ====== YOUR CODE: ======
+        # raise NotImplementedError()
+        channels_list = [in_channels] + list(self.channels)
+        N = len(self.channels)
+        P = self.pool_every
 
-        pooling = POOLINGS[self.pooling_type]
-        act = ACTIVATIONS[self.activation_type]
+        for i in range(N):
+            layers.append(nn.Conv2d(channels_list[i],
+                                    channels_list[i+1],
+                                    *self.conv_params.values()))
+            layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
+            if (i+1) % P == 0:
+                layers.append(POOLINGS[self.pooling_type](*self.pooling_params.values()))
 
-        layers.extend([nn.Conv2d(in_channels, self.channels[0], *self.conv_params), act(*self.activation_params)])
-        count_p = 1
-        if self.pool_every == 1:
-            layers.append(pooling(*self.pooling_params))
-        for i in range(len(self.channels) - 1):
-            layers.extend([nn.Conv2d(self.channels[i], self.channels[i+1], *self.conv_params), act(*self.activation_params)])
-            count_p += 1
-            if count_p % self.pool_every == 0:
-                layers.append(pooling(*self.pooling_params))
 
-        # for i in range(len(self.hidden_dims)-1):
-        #     layers.extend([nn.Linear(self.hidden_dims[i], self.hidden_dims[i+1]), act(*self.activation_params)])
-        # layers.append(nn.Linear(self.hidden_dims[-1], self.out_classes))
         # ========================
         seq = nn.Sequential(*layers)
         return seq
@@ -103,11 +99,104 @@ class ConvClassifier(nn.Module):
         Calculates the number of extracted features going into the the classifier part.
         :return: Number of features.
         """
+
+        def conv_size(h_in, w_in):
+            if "kernel_size" in self.conv_params.keys():
+                kernel_size = (self.conv_params['kernel_size'], self.conv_params['kernel_size']) if isinstance(
+                    self.conv_params['kernel_size'], int) else self.conv_params['kernel_size']
+            else:
+                kernel_size = (self.kernel_size, self.kernel_size) if isinstance(
+                    self.kernel_size, int) else self.kernel_size
+
+            if "padding" in self.conv_params.keys():
+                padding = (self.conv_params['padding'], self.conv_params['padding']) if isinstance(
+                    self.conv_params['padding'], int) else self.conv_params['padding']
+            else:
+                padding = (0,0)
+
+            if "dilation" in self.conv_params.keys():
+                dilation = (self.conv_params['dilation'], self.conv_params['dilation']) if isinstance(
+                    self.conv_params['dilation'], int) else self.conv_params['dilation']
+            else:
+                dilation = (1,1)
+
+            if "stride" in self.conv_params.keys():
+                stride = (self.conv_params['stride'], self.conv_params['stride']) if isinstance(
+                    self.conv_params['stride'], int) else self.conv_params['stride']
+            else:
+                stride = (1,1)
+
+            # print("========convo===========")
+            # print("kernel = " + str(kernel_size))
+            # print("padding = " + str(padding))
+            # print("dilation = " + str(dilation))
+            # print("stride = " + str(stride))
+
+            h_out = floor(((h_in + 2 *padding[0] - dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1)
+            w_out = floor(((w_in + 2 *padding[1] - dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1)
+            return h_out,w_out
+
+        def pool_size(h_in, w_in):
+
+            if "kernel_size" in self.pooling_params.keys():
+                kernel_size = (self.pooling_params['kernel_size'], self.pooling_params['kernel_size']) if isinstance(
+                    self.pooling_params['kernel_size'], int) else self.pooling_params['kernel_size']
+            # else:
+            #     kernel_size = (self.kernel_size, self.kernel_size) if isinstance(
+            #         self.kernel_size, int) else self.kernel_size
+
+            if "padding" in self.pooling_params.keys():
+                padding = (self.pooling_params['padding'], self.pooling_params['padding']) if isinstance(
+                    self.pooling_params['padding'], int) else self.pooling_params['padding']
+            else:
+                padding = (0,0)
+
+            if "dilation" in self.pooling_params.keys():
+                dilation = (self.pooling_params['dilation'], self.pooling_params['dilation']) if isinstance(
+                    self.pooling_params['dilation'], int) else self.pooling_params['dilation']
+            else:
+                dilation = (1,1)
+
+            if "stride" in self.pooling_params.keys():
+                stride = (self.pooling_params['stride'], self.pooling_params['stride']) if isinstance(
+                    self.pooling_params['stride'], int) else self.pooling_params['stride']
+            else:
+                stride = kernel_size
+
+            # print("========pooling===========")
+            # print("kernel = " + str(kernel_size))
+            # print("padding = " + str(padding))
+            # print("dilation = " + str(dilation))
+            # print("stride = " + str(stride))
+
+            h_out = floor(((h_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]) + 1)
+            w_out = floor(((w_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]) + 1)
+            return h_out, w_out
+
         # Make sure to not mess up the random state.
         rng_state = torch.get_rng_state()
         try:
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            _, in_h, in_w, = tuple(self.in_size)
+
+            from math import floor
+
+            for channel in range(len(self.channels)):
+                # print(channel)
+                in_h, in_w = conv_size(in_h, in_w)
+                if (channel+1) % self.pool_every == 0:
+                # if channel > 0 and channel % self.pool_every == 0:
+                    in_h, in_w = pool_size(in_h, in_w)
+
+            return in_h * in_w * self.channels[-1]
+
+
+
+
+            # return self.channels[-1] * ceil((in_h * in_w) / ((self.pooling_params['kernel_size'] * self.pooling_params['kernel_size']) ** (len(self.channels) // self.pool_every)))
+            # return self.channels[-1] * self.conv_params['kernel_size'] * self.conv_params['kernel_size']
+
+            # raise NotImplementedError()
             # ========================
         finally:
             torch.set_rng_state(rng_state)
@@ -117,13 +206,18 @@ class ConvClassifier(nn.Module):
 
         # Discover the number of features after the CNN part.
         n_features = self._n_features()
+        # print("n features = " + str(n_features))
 
         # TODO: Create the classifier part of the model:
         #  (FC -> ACT)*M -> Linear
         #  The last Linear layer should have an output dim of out_classes.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        fc_dims = [n_features] + list(self.hidden_dims)
+        for i in range(len(fc_dims)-1):
+            layers.append(nn.Linear(fc_dims[i], fc_dims[i+1]))
+            layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
         # ========================
+        layers.append(nn.Linear(fc_dims[-1], self.out_classes))
 
         seq = nn.Sequential(*layers)
         return seq
@@ -133,7 +227,12 @@ class ConvClassifier(nn.Module):
         #  Extract features from the input, run the classifier on them and
         #  return class scores.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        features = self.feature_extractor(x)
+        # print(features.shape)
+        features = features.view(features.size(0), -1)
+        # print(features.shape)
+        # note: no need to reshape the features now
+        out = self.classifier(features)
         # ========================
         return out
 
@@ -177,6 +276,14 @@ class ResidualBlock(nn.Module):
         if activation_type not in ACTIVATIONS:
             raise ValueError("Unsupported activation type")
 
+        self.in_channels = in_channels
+        self.channels = channels
+        self.kernel_sizes = kernel_sizes
+        self.batchnorm = batchnorm
+        self.dropout = dropout
+        self.activation_type = activation_type
+        self.activation_params = activation_params
+
         self.main_path, self.shortcut_path = None, None
 
         # TODO: Implement a generic residual block.
@@ -193,8 +300,44 @@ class ResidualBlock(nn.Module):
         #  - Don't create layers which you don't use! This will prevent
         #    correct comparison in the test.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.main_path = self._create_main_path()
+        self.shortcut_path = self._create_shortcut_path()
         # ========================
+
+    def _create_main_path(self):
+        layers = []
+        channels_list = [self.in_channels] + list(self.channels)
+        N = len(self.channels)
+
+        for i in range(N-1):
+            layer_padding = int((self.kernel_sizes[i] - 1) / 2)  # the kernel size is always odd (given)
+            layers.append(nn.Conv2d(channels_list[i],
+                                    channels_list[i+1],
+                                    kernel_size=self.kernel_sizes[i],
+                                    bias=True,
+                                    padding=layer_padding))
+            if self.dropout:
+                layers.append(nn.Dropout2d(self.dropout))
+            if self.batchnorm:
+                layers.append(nn.BatchNorm2d(channels_list[i+1]))
+            layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
+        layer_padding = int((self.kernel_sizes[-1] - 1) / 2)
+        layers.append(nn.Conv2d(channels_list[-2],
+                                channels_list[-1],
+                                kernel_size=self.kernel_sizes[-1],
+                                bias=True,
+                                padding=layer_padding))
+
+        seq = nn.Sequential(*layers)
+        return seq
+
+    def _create_shortcut_path(self):
+        if self.in_channels == self.channels[-1]:
+            layers = [nn.Identity()]
+        else:
+            layers = [nn.Conv2d(self.in_channels, self.channels[-1], bias=False, kernel_size=1, padding=0)]
+        seq = nn.Sequential(*layers)
+        return seq
 
     def forward(self, x):
         out = self.main_path(x)
@@ -228,7 +371,15 @@ class ResidualBottleneckBlock(ResidualBlock):
         :param kwargs: Any additional arguments supported by ResidualBlock.
         """
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        in_channels = in_out_channels
+        channels = [inner_channels[0]] + list(inner_channels) + [in_out_channels]
+        kernels= [1] + list(inner_kernel_sizes) + [1]
+        ResidualBlock.__init__(self,
+                               in_channels=in_channels,
+                               channels=channels,
+                               kernel_sizes=kernels,
+                               **kwargs)
+
         # ========================
 
 
@@ -253,7 +404,13 @@ class ResNetClassifier(ConvClassifier):
             in_size, out_classes, channels, pool_every, hidden_dims, **kwargs
         )
 
+
     def _make_feature_extractor(self):
+        self.conv_params['kernel_size'] = 3
+        self.conv_params['padding'] = int((3 - 1) / 2)
+
+        # print(self.pooling_params)
+
         in_channels, in_h, in_w, = tuple(self.in_size)
 
         layers = []
@@ -268,7 +425,29 @@ class ResNetClassifier(ConvClassifier):
         #    without a POOL after them.
         #  - Use your own ResidualBlock implementation.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        channels_list = [in_channels] + list(self.channels)
+        N = len(self.channels)
+        P = self.pool_every
+
+        for i in range(0, N-1, P):
+            channels = channels_list[i+1:i+P+1]
+
+            res_block = ResidualBlock(channels_list[i],
+                                      channels,
+                                      kernel_sizes=[3]*len(channels),
+                                      batchnorm=self.batchnorm,
+                                      dropout=self.dropout,
+                                      activation_type=self.activation_type,
+                                      activation_params=self.activation_params
+                                      )
+            layers.append(res_block)
+            layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
+
+            # TODO - MARWA: should it be <= ???
+            if i + P < N:
+                layers.append(POOLINGS[self.pooling_type](*self.pooling_params.values()))
+
         # ========================
         seq = nn.Sequential(*layers)
         return seq
@@ -291,6 +470,6 @@ class YourCodeNet(ConvClassifier):
     #  For example, add batchnorm, dropout, skip connections, change conv
     #  filter sizes etc.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
-
+    # raise NotImplementedError()
+    pass
     # ========================
