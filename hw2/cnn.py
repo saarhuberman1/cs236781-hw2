@@ -134,6 +134,7 @@ class ConvClassifier(nn.Module):
 
             h_out = floor(((h_in + 2 *padding[0] - dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1)
             w_out = floor(((w_in + 2 *padding[1] - dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1)
+            # print(h_out , w_out)
             return h_out,w_out
 
         def pool_size(h_in, w_in):
@@ -171,6 +172,7 @@ class ConvClassifier(nn.Module):
 
             h_out = floor(((h_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]) + 1)
             w_out = floor(((w_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]) + 1)
+            # print(h_out , w_out)
             return h_out, w_out
 
         # Make sure to not mess up the random state.
@@ -430,7 +432,7 @@ class ResNetClassifier(ConvClassifier):
         N = len(self.channels)
         P = self.pool_every
 
-        for i in range(0, N-1, P):
+        for i in range(0, N, P):
             channels = channels_list[i+1:i+P+1]
 
             res_block = ResidualBlock(channels_list[i],
@@ -444,8 +446,8 @@ class ResNetClassifier(ConvClassifier):
             layers.append(res_block)
             layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
 
-            # TODO - MARWA: should it be <= ???
-            if i + P < N:
+            # TODO - MARWA: should it be <= ??? - controlling whether we have a pooling layer as the last layer
+            if i + P <= N:
                 layers.append(POOLINGS[self.pooling_type](*self.pooling_params.values()))
 
         # ========================

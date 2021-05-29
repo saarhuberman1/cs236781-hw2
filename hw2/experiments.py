@@ -77,7 +77,37 @@ def run_experiment(
     #   for you automatically.
     fit_res = None
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    num_classes = 10
+    channels = [channel for channel in filters_per_layer for _ in range(layers_per_block)]
+
+    # print("channels = " + str(channels))
+    in_size = ds_train[0][0].shape
+    print(in_size)
+
+    model = model_cls(in_size=in_size,
+                      out_classes=num_classes,
+                      channels=channels,
+                      pool_every=pool_every,
+                      hidden_dims=hidden_dims,
+                      activation_type='lrelu',
+                      activation_params=dict(negative_slope=0.01),
+                      pooling_type='avg',
+                      pooling_params=dict(kernel_size=2),
+                      batchnorm=True,
+                      dropout=0.1,)
+
+    # print(model)
+    loss_fn = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=reg)
+
+    trainer = training.TorchTrainer(model, loss_fn, optimizer, device)
+
+    train_data_loader = torch.utils.data.DataLoader(ds_train, bs_train, shuffle=True)
+    test_data_loader = torch.utils.data.DataLoader(ds_test, bs_test, shuffle=True)
+
+    fit_res = trainer.fit(train_data_loader, test_data_loader, epochs, max_batches=batches, print_every=6)
+
     # ========================
 
     save_experiment(run_name, out_dir, cfg, fit_res)
