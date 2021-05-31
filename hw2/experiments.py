@@ -83,7 +83,7 @@ def run_experiment(
 
     # print("channels = " + str(channels))
     in_size = ds_train[0][0].shape
-    print(in_size)
+    # print(in_size)
 
     model = model_cls(in_size=in_size,
                       out_classes=num_classes,
