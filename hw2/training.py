@@ -81,6 +81,7 @@ class Trainer(abc.ABC):
             #    save the model to the file specified by the checkpoints
             #    argument.
             # ====== YOUR CODE: ======
+            # print(dl_test)
             actual_num_epochs += 1
             train_losses, train_accuracy = self.train_epoch(dl_train, **kw)
             test_losses, test_accuracy = self.test_epoch(dl_test, **kw)
@@ -89,7 +90,12 @@ class Trainer(abc.ABC):
             test_loss.extend(test_losses)
             test_acc.append(test_accuracy)
 
-            current_test_loss = torch.mean(torch.stack(test_losses))
+            # print(test_losses)
+
+            # TODO - MARWA: confirm this with Saar. Why do we expect test_losses to be a list of tensors?
+            # current_test_loss = torch.mean(torch.stack(test_losses))
+            current_test_loss = torch.mean(torch.stack(test_losses)) if isinstance(test_losses[0], torch.Tensor) \
+                else sum(test_losses)/len(test_losses)
             if (best_test_loss is None) or (current_test_loss < best_test_loss):
                 best_test_loss = current_test_loss
                 epochs_without_improvement = 0
