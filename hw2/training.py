@@ -90,8 +90,6 @@ class Trainer(abc.ABC):
             test_loss.extend(test_losses)
             test_acc.append(test_accuracy)
 
-            # print(test_losses)
-
             # TODO - MARWA: confirm this with Saar. Why do we expect test_losses to be a list of tensors?
             # current_test_loss = torch.mean(torch.stack(test_losses))
             current_test_loss = torch.mean(torch.stack(test_losses)) if isinstance(test_losses[0], torch.Tensor) \
@@ -247,7 +245,6 @@ class LayerTrainer(Trainer):
         # ========================
 
         return BatchResult(loss, num_correct)
-
 
 
 class TorchTrainer(Trainer):

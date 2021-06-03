@@ -374,8 +374,9 @@ class ResidualBottleneckBlock(ResidualBlock):
         """
         # ====== YOUR CODE: ======
         in_channels = in_out_channels
+        # TODO: MARWA - should I use [inner_channels[0]] as part of channels?
         channels = [inner_channels[0]] + list(inner_channels) + [in_out_channels]
-        kernels= [1] + list(inner_kernel_sizes) + [1]
+        kernels = [1] + list(inner_kernel_sizes) + [1]
         ResidualBlock.__init__(self,
                                in_channels=in_channels,
                                channels=channels,
@@ -409,7 +410,7 @@ class ResNetClassifier(ConvClassifier):
 
     def _make_feature_extractor(self):
         self.conv_params['kernel_size'] = 3
-        self.conv_params['padding'] = int((3 - 1) / 2)
+        self.conv_params['padding'] = 1  # int((3 - 1) / 2)
 
         # print(self.pooling_params)
 
@@ -432,9 +433,9 @@ class ResNetClassifier(ConvClassifier):
         N = len(self.channels)
         P = self.pool_every
 
-        for i in range(0, N, P):
-            channels = channels_list[i+1:i+P+1]
-
+        for i in range(0, N, P):            # (0, 5, 2) : [0,1,2,3,4]
+            channels = channels_list[i+1:i+P+1] if (i+P+1) <= len(channels_list) else channels_list[i+1:]
+            # TODO: - MARWA - fix end of list indexing
             res_block = ResidualBlock(channels_list[i],
                                       channels,
                                       kernel_sizes=[3]*len(channels),
@@ -446,7 +447,6 @@ class ResNetClassifier(ConvClassifier):
             layers.append(res_block)
             layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
 
-            # TODO - MARWA: should it be <= ??? - controlling whether we have a pooling layer as the last layer
             if i + P <= N:
                 layers.append(POOLINGS[self.pooling_type](*self.pooling_params.values()))
 
@@ -456,15 +456,34 @@ class ResNetClassifier(ConvClassifier):
 
 
 class YourCodeNet(ConvClassifier):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        in_size,
+        out_classes,
+        channels,
+        pool_every,
+        hidden_dims,
+        batchnorm=False,
+        dropout=0.0,
+        conv_params ={},
+        pooling_params= {},
+        **kwargs,
+    ):
         """
         See ConvClassifier.__init__
         """
-        super().__init__(*args, **kwargs)
+        self.batchnorm = batchnorm
+        self.dropout = dropout
 
+        super().__init__(
+            in_size, out_classes, channels, pool_every, hidden_dims, conv_params=conv_params, pooling_params=pooling_params,**kwargs
+        )
+
+        # self.conv_params = conv_params
+        # self.pooling_params = pooling_params
         # TODO: Add any additional initialization as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
 
     # TODO: Change whatever you want about the ConvClassifier to try to
@@ -473,5 +492,32 @@ class YourCodeNet(ConvClassifier):
     #  filter sizes etc.
     # ====== YOUR CODE: ======
     # raise NotImplementedError()
-    pass
-    # ========================
+    def _make_feature_extractor(self):
+        layers = []
+        in_channels, in_h, in_w, = tuple(self.in_size)
+
+        channels_list = [in_channels] + list(self.channels)
+        N = len(self.channels)
+        P = self.pool_every
+
+        for i in range(N):
+            # print(self.conv_params)
+            # print(self.pooling_params)
+            layers.append(nn.Conv2d(channels_list[i],
+                                    channels_list[i + 1],
+                                    *self.conv_params.values()))
+            if self.batchnorm:
+                layers.append(nn.BatchNorm2d(channels_list[i + 1]))
+            layers.append(ACTIVATIONS[self.activation_type](*self.activation_params.values()))
+
+            if (i + 1) % P == 0:
+                layers.append(POOLINGS[self.pooling_type](*self.pooling_params.values()))
+                if self.dropout:
+                    layers.append(nn.Dropout2d(self.dropout))
+
+
+        # ========================
+        seq = nn.Sequential(*layers)
+        return seq
+
+

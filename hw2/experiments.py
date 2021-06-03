@@ -79,6 +79,7 @@ def run_experiment(
     # ====== YOUR CODE: ======
 
     num_classes = 10
+
     channels = [channel for channel in filters_per_layer for _ in range(layers_per_block)]
 
     # print("channels = " + str(channels))
@@ -90,6 +91,7 @@ def run_experiment(
                       channels=channels,
                       pool_every=pool_every,
                       hidden_dims=hidden_dims,
+                      conv_params=dict(kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                       activation_type='lrelu',
                       activation_params=dict(negative_slope=0.01),
                       pooling_type='avg',
@@ -97,7 +99,7 @@ def run_experiment(
                       batchnorm=True,
                       dropout=0.1,)
 
-    # print(model)
+    print(model)
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=reg)
 
