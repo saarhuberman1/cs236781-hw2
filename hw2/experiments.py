@@ -15,6 +15,13 @@ from . import cnn, training
 
 DATA_DIR = os.path.expanduser("~/.pytorch-datasets")
 
+# MODEL_TYPES = dict(
+#     cnn=cnn.ConvClassifier, resnet=cnn.ResNetClassifier, ycnCnn=cnn.YourCodeNetCnn,ycnRes=cnn.YourCodeNetRes,ycnnBottle=cnn.YourCodeNetCnn_bottle,
+# )
+
+
+
+
 MODEL_TYPES = dict(
     cnn=cnn.ConvClassifier, resnet=cnn.ResNetClassifier, ycn=cnn.YourCodeNet
 )
@@ -42,8 +49,8 @@ def run_experiment(
     model_type="cnn",
     # You can add extra configuration for your experiments here
     conv_params=dict(kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-    activation_type="lrelu",
-    activation_params=dict(negative_slope=0.01),
+    activation_type="relu",
+    activation_params=dict(negative_slope=0.02),
     pooling_type="avg",
     pooling_params=dict(kernel_size=2),
     batchnorm=True,
@@ -131,7 +138,7 @@ def run_experiment(
             conv_params=conv_params,
             pooling_params=pooling_params,)
 
-    print(model)
+    # print(model)
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=reg)
 
@@ -139,8 +146,10 @@ def run_experiment(
 
     train_data_loader = torch.utils.data.DataLoader(ds_train, bs_train, shuffle=True)
     test_data_loader = torch.utils.data.DataLoader(ds_test, bs_test, shuffle=True)
+    # print("starting training")
 
-    fit_res = trainer.fit(train_data_loader, test_data_loader, epochs, max_batches=batches, print_every=6)
+    fit_res = trainer.fit(train_data_loader, test_data_loader, epochs, max_batches=batches, print_every=6,early_stopping=early_stopping)
+    # print("finished training")
 
     # ========================
 
@@ -288,6 +297,20 @@ def parse_cli():
 
 
 if __name__ == "__main__":
+
+    seed = 42
+
+    # experiment 1
+    K = [32, 64]
+    L = [2, 4, 8, 16]
+    for k in K:
+        for l in L:
+            run_experiment(
+                'test_run', seed=seed, bs_train=64, batches=400, epochs=20, early_stopping=5,
+                filters_per_layer=[k], layers_per_block=l, pool_every=3, hidden_dims=[100],
+                model_type='cnn',
+            )
+
     parsed_args = parse_cli()
     subcmd_fn = parsed_args.subcmd_fn
     del parsed_args.subcmd_fn
